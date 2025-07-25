@@ -504,7 +504,9 @@ conf:
         name:
           fields: payload.router.name
         resource_id:
-          fields: ["payload.router.id", "payload.id"]
+          fields: payload.router.id
+        event_type:
+          fields: event_type
     - event_type: floatingip.*
       traits:
         <<: *network_traits
@@ -1051,15 +1053,20 @@ conf:
           ip.floating:
         event_create:
           - floatingip.create.end
-        event_delete: floatingip.delete.end
+          - router.create.end
+        event_delete:
+          - floatingip.delete.end
+          - router.delete.end
         event_update:
           - floatingip.update.end
+          - router.update.end
         event_attributes:
           id: resource_id
           user_id: user_id
           project_id: project_id
           floating_ip_address: ip_address
           event_type: event_type
+          display_name: name
 
       - resource_type: stack
         metrics:
@@ -1776,34 +1783,13 @@ endpoints:
 pod:
   resources:
     enabled: true
-    compute:
-      requests:
-        memory: {}
-        cpu: {}
-      limits:
-        memory: {}
-        cpu: {}
     notification:
       requests:
-        memory: {}
-        cpu: {}
+        memory: 256
+        cpu: 500
       limits:
-        memory: {}
-        cpu: {}
-    central:
-      requests:
-        memory: {}
-        cpu: {}
-      limits:
-        memory: {}
-        cpu: {}
-    ipmi:
-      requests:
-        memory: {}
-        cpu: {}
-      limits:
-        memory: {}
-        cpu: {}
+        memory: 2Gi
+        cpu: "2000m"
   replicas:
     central: 1
     notification: 1
@@ -1813,7 +1799,7 @@ pod:
         revision_history: 3
         pod_replacement_strategy: RollingUpdate
         rolling_update:
-          max_unavailable: 1
+          max_unavailable: 20%
           max_surge: 3
       daemonsets:
         pod_replacement_strategy: RollingUpdate
@@ -1821,6 +1807,12 @@ pod:
           enabled: true
           min_ready_seconds: 0
           max_unavailable: 20%
+    disruption_budget:
+      api:
+        min_available: 0
+    termination_grace_period:
+      api:
+        timeout: 600
 
 manifests:
   deployment_api: false
